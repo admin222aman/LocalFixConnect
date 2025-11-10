@@ -254,8 +254,12 @@ export default function Booking() {
                               <DialogTrigger asChild>
                                 <Button size="sm" onClick={() => {
                                   setSelectedBookingForReview(booking);
-                                  reviewForm.setValue("bookingId", booking.id);
-                                  reviewForm.setValue("providerId", booking.providerId);
+                                  reviewForm.reset({
+                                    bookingId: booking.id,
+                                    providerId: booking.providerId,
+                                    rating: 0,
+                                    comment: "",
+                                  });
                                 }}>
                                   Leave Review
                                 </Button>
@@ -266,6 +270,8 @@ export default function Booking() {
                                 </DialogHeader>
                                 <Form {...reviewForm}>
                                   <form onSubmit={reviewForm.handleSubmit(onCreateReview)} className="space-y-4">
+                                    <input type="hidden" {...reviewForm.register("bookingId")} />
+                                    <input type="hidden" {...reviewForm.register("providerId")} />
                                     <FormField
                                       control={reviewForm.control}
                                       name="rating"
