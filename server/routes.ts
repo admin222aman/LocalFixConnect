@@ -368,6 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scheduledTime: req.body.scheduledTime || "09:00",
         status: "pending" as const,
         customerAddress: req.body.customerAddress,
+        customerPhone: req.body.customerPhone,
         estimatedDuration: Number(req.body.estimatedDuration) || 2,
         notes: req.body.notes || "",
       };
