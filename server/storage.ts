@@ -1,3 +1,5 @@
+// storage.ts (FINAL CORRECTED CODE)
+
 import {
   type User,
   type InsertUser,
@@ -59,8 +61,6 @@ export class MemStorage implements IStorage {
   private reviews: Map<string, Review> = new Map();
 
   constructor() {
-    // We call initializeSeedData asynchronously, but it's important to note
-    // that this memory store is primarily for development/testing environments.
     this.initializeSeedData();
   }
 
@@ -151,12 +151,11 @@ export class MemStorage implements IStorage {
         password: providerData.password,
         firstName: providerData.firstName,
         lastName: providerData.lastName,
-        role: providerData.role,
+        // CRITICAL FIX: Ensure 'role' is included here for the createUser call
+        role: providerData.role, 
       });
 
       // FIX: Removed 'rating' and 'reviewCount' from the InsertProvider call
-      // as they are not standard InsertProvider fields. 
-      // The createProvider method below will set their defaults (0) using casting.
       await this.createProvider({
         userId: user.id,
         specialty: providerData.specialty,
@@ -180,12 +179,13 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    // FIX: Handle 'phone' potentially being 'undefined' in InsertUser.
     const user: User = {
       ...insertUser,
-      phone: insertUser.phone ?? null,
       id,
       createdAt: new Date(),
+      // ✅ FINAL FIX: Ensure defaults for phone and role, assuming they are required on the final User object
+      phone: (insertUser as any).phone ?? null, 
+      role: (insertUser as any).role ?? "customer", // Default to 'customer' if not provided
     };
     this.users.set(id, user);
     return user;
@@ -207,7 +207,6 @@ export class MemStorage implements IStorage {
 
   async createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory> {
     const id = randomUUID();
-    // FIX: Handle 'description' potentially being 'undefined' in InsertServiceCategory.
     const serviceCategory: ServiceCategory = {
       ...category,
       id,
@@ -255,7 +254,6 @@ export class MemStorage implements IStorage {
     
     if (filters?.categoryId) {
       filteredProviders = filteredProviders.filter(p => {
-        // Check if provider has the category in their categories array
         return p.categories && p.categories.includes(filters.categoryId!);
       });
     }
@@ -275,20 +273,19 @@ export class MemStorage implements IStorage {
       description: provider.description ?? null,
       isApproved: provider.isApproved ?? false,
       
-      // ✅ FIX: Default to 'true' if undefined, as it's a provider's availability flag.
+      // FIX: Ensure all required fields have defaults
       isAvailable: (provider as any).isAvailable ?? true, 
-      
       businessName: (provider as any).businessName ?? null,
       serviceRadius: (provider as any).serviceRadius ?? null,
       hourlyRate: (provider as any).hourlyRate ?? null,
 
-      // 💥 CRITICAL FIX: The rating must be a STRING ("0") to match the sample data ("4.9").
+      // CRITICAL FIX: The rating must be a STRING ("0")
       rating: (provider as any).rating ?? "0", 
       reviewCount: (provider as any).reviewCount ?? 0,
       categories: provider.categories ?? [],
       availability: (provider as any).availability ?? null,
 
-      // ✅ FIX: Added missing fields required by the full Provider type, assuming null/empty array defaults.
+      // FIX: Added missing fields required by the full Provider type
       profileImage: (provider as any).profileImage ?? null, 
       portfolio: (provider as any).portfolio ?? [], 
       certifications: (provider as any).certifications ?? [], 
