@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   phone: text("phone"),
   role: text("role", { enum: ["customer", "provider", "admin"] }).notNull().default("customer"),
+  blocked: boolean("blocked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

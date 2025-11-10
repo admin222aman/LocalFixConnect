@@ -465,8 +465,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin routes
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
-    // This would normally come from a database, for demo we'll return limited data
-    res.json([{ message: "Admin users endpoint - implement as needed" }]);
+    const users = await storage.getAllUsers();
+    // Don't send password hashes to client
+    const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+    res.json(usersWithoutPasswords);
+  });
+
+  app.put("/api/admin/users/:id/block", requireAdmin, async (req, res) => {
+    const { blocked } = req.body;
+    const user = await storage.updateUser(req.params.id, { blocked });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const { password, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  });
+
+  app.put("/api/admin/users/:id/password", requireAdmin, async (req, res) => {
+    try {
+      const { newPassword } = req.body;
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const user = await storage.updateUser(req.params.id, { password: hashedPassword });
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update password" });
+    }
   });
 
   app.get("/api/admin/providers", requireAdmin, async (req, res) => {

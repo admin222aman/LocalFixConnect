@@ -44,6 +44,12 @@ export default function AdminPanel() {
     enabled: isAuthenticated || (user && user.role === 'admin'),
   });
 
+  // Get users for admin
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/admin/users'],
+    enabled: isAuthenticated || (user && user.role === 'admin'),
+  });
+
   // Admin login form
   const adminLoginForm = useForm({
     resolver: zodResolver(adminLoginSchema),
@@ -116,6 +122,49 @@ export default function AdminPanel() {
       toast({
         title: "Error",
         description: "Failed to delete review.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Block/unblock user mutation
+  const blockUserMutation = useMutation({
+    mutationFn: async ({ userId, blocked }: { userId: string; blocked: boolean }) => {
+      const response = await apiRequest("PUT", `/api/admin/users/${userId}/block`, { blocked });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: "User Status Updated",
+        description: "The user status has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update user status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Change user password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+      const response = await apiRequest("PUT", `/api/admin/users/${userId}/password`, { newPassword });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password Changed",
+        description: "The user's password has been changed successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to change password.",
         variant: "destructive",
       });
     },
@@ -355,9 +404,107 @@ export default function AdminPanel() {
                 <CardTitle>User Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-gray-600">User management features will be added in a future update.</p>
-                </div>
+                {users.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">No users registered yet</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user: any) => (
+                        <TableRow key={user.id}>
+                          <TableCell>
+                            {user.firstName} {user.lastName}
+                          </TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                              {user.role}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={user.blocked ? 'destructive' : 'outline'}>
+                              {user.blocked ? 'Blocked' : 'Active'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {user.role !== 'admin' && (
+                                <Button
+                                  size="sm"
+                                  variant={user.blocked ? "outline" : "destructive"}
+                                  onClick={() => blockUserMutation.mutate({
+                                    userId: user.id,
+                                    blocked: !user.blocked
+                                  })}
+                                  disabled={blockUserMutation.isPending}
+                                  data-testid={`button-block-user-${user.id}`}
+                                >
+                                  {user.blocked ? 'Unblock' : 'Block'}
+                                </Button>
+                              )}
+                              {user.role !== 'admin' && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="outline" data-testid={`button-change-password-${user.id}`}>
+                                      Change Password
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Change Password for {user.firstName} {user.lastName}</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Enter a new password for this user (minimum 6 characters).
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <Input
+                                      type="password"
+                                      id={`new-password-${user.id}`}
+                                      placeholder="New password (min 6 characters)"
+                                      data-testid={`input-new-password-${user.id}`}
+                                    />
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => {
+                                          const input = document.getElementById(`new-password-${user.id}`) as HTMLInputElement;
+                                          if (input && input.value.length >= 6) {
+                                            changePasswordMutation.mutate({
+                                              userId: user.id,
+                                              newPassword: input.value
+                                            });
+                                          } else {
+                                            toast({
+                                              title: "Invalid Password",
+                                              description: "Password must be at least 6 characters long.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                        data-testid={`button-confirm-password-${user.id}`}
+                                      >
+                                        Change Password
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
