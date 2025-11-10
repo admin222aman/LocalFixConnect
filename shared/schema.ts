@@ -61,6 +61,7 @@ export const bookings = pgTable("bookings", {
   scheduledTime: text("scheduled_time").notNull(),
   status: text("status", { enum: ["pending", "confirmed", "completed", "cancelled"] }).notNull().default("pending"),
   customerAddress: text("customer_address").notNull(),
+  customerPhone: text("customer_phone").notNull(),
   estimatedDuration: integer("estimated_duration"), // in hours
   estimatedCost: decimal("estimated_cost", { precision: 8, scale: 2 }),
   actualCost: decimal("actual_cost", { precision: 8, scale: 2 }),

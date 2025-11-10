@@ -25,6 +25,7 @@ const bookingSchema = z.object({
   scheduledDate: z.string().min(1, "Please select a date"),
   scheduledTime: z.string().min(1, "Please select a time"),
   customerAddress: z.string().min(5, "Please provide your address"),
+  customerPhone: z.string().min(10, "Please provide a valid phone number"),
   estimatedDuration: z.number().min(1, "Please estimate duration"),
   notes: z.string().optional(),
 });
@@ -70,6 +71,7 @@ export default function Booking() {
       scheduledDate: "",
       scheduledTime: "",
       customerAddress: "",
+      customerPhone: "",
       estimatedDuration: 2,
       notes: "",
     },
@@ -93,6 +95,7 @@ export default function Booking() {
         scheduledDate: new Date(data.scheduledDate + 'T' + data.scheduledTime).toISOString(),
         scheduledTime: data.scheduledTime,
         customerAddress: data.customerAddress,
+        customerPhone: data.customerPhone,
         estimatedDuration: Number(data.estimatedDuration),
         notes: data.notes || "",
       };
@@ -433,6 +436,20 @@ export default function Booking() {
                           <FormLabel>Service Address</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="123 Main St, City, State, ZIP" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={bookingForm.control}
+                      name="customerPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Phone Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="tel" placeholder="(555) 123-4567" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
