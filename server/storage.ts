@@ -1,5 +1,3 @@
-// storage.ts (FINAL CORRECTED CODE)
-
 import {
   type User,
   type InsertUser,
@@ -151,11 +149,11 @@ export class MemStorage implements IStorage {
         password: providerData.password,
         firstName: providerData.firstName,
         lastName: providerData.lastName,
-        // CRITICAL FIX: Ensure 'role' is included here for the createUser call
+        // Ensure role is included for the final User object
         role: providerData.role, 
       });
 
-      // FIX: Removed 'rating' and 'reviewCount' from the InsertProvider call
+      // RETAIN: Only pass fields expected by InsertProvider (omitting rating/reviewCount)
       await this.createProvider({
         userId: user.id,
         specialty: providerData.specialty,
@@ -183,7 +181,7 @@ export class MemStorage implements IStorage {
       ...insertUser,
       id,
       createdAt: new Date(),
-      // ✅ FINAL FIX: Ensure defaults for phone and role, assuming they are required on the final User object
+      // ✅ FIX: Ensure defaults for phone and role, assuming they are required on the final User object
       phone: (insertUser as any).phone ?? null, 
       role: (insertUser as any).role ?? "customer", // Default to 'customer' if not provided
     };
@@ -273,19 +271,19 @@ export class MemStorage implements IStorage {
       description: provider.description ?? null,
       isApproved: provider.isApproved ?? false,
       
-      // FIX: Ensure all required fields have defaults
+      // ✅ FIX: Ensure all required fields have safe defaults
       isAvailable: (provider as any).isAvailable ?? true, 
       businessName: (provider as any).businessName ?? null,
       serviceRadius: (provider as any).serviceRadius ?? null,
       hourlyRate: (provider as any).hourlyRate ?? null,
 
-      // CRITICAL FIX: The rating must be a STRING ("0")
+      // 💥 CRITICAL FIX: The rating must be a STRING ("0") to match the assumed schema type
       rating: (provider as any).rating ?? "0", 
       reviewCount: (provider as any).reviewCount ?? 0,
       categories: provider.categories ?? [],
       availability: (provider as any).availability ?? null,
 
-      // FIX: Added missing fields required by the full Provider type
+      // ✅ FIX: Added missing fields required by the full Provider type
       profileImage: (provider as any).profileImage ?? null, 
       portfolio: (provider as any).portfolio ?? [], 
       certifications: (provider as any).certifications ?? [], 
