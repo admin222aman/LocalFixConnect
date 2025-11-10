@@ -33,7 +33,7 @@ const bookingSchema = z.object({
 const reviewSchema = z.object({
   bookingId: z.string().min(1, "Booking ID is required"),
   providerId: z.string().min(1, "Provider ID is required"),
-  rating: z.number().min(1, "Rating is required").max(5, "Rating must be between 1 and 5"),
+  rating: z.number().min(1, "Please select a rating").max(5, "Rating must be between 1 and 5"),
   comment: z.string().optional(),
 });
 
@@ -82,7 +82,7 @@ export default function Booking() {
     defaultValues: {
       bookingId: "",
       providerId: "",
-      rating: 5,
+      rating: 0,
       comment: "",
     },
   });
@@ -277,7 +277,7 @@ export default function Booking() {
                                       name="rating"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel>Rating</FormLabel>
+                                          <FormLabel>Rating *</FormLabel>
                                           <FormControl>
                                             <div className="flex gap-2">
                                               {[1, 2, 3, 4, 5].map((star) => (
