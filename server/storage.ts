@@ -59,6 +59,8 @@ export class MemStorage implements IStorage {
   private reviews: Map<string, Review> = new Map();
 
   constructor() {
+    // We call initializeSeedData asynchronously, but it's important to note
+    // that this memory store is primarily for development/testing environments.
     this.initializeSeedData();
   }
 
@@ -94,7 +96,7 @@ export class MemStorage implements IStorage {
     const plumbingCat = Array.from(this.serviceCategories.values()).find(c => c.name === "Plumbing");
     const carpentryCat = Array.from(this.serviceCategories.values()).find(c => c.name === "Carpentry");
 
-    // Create sample providers
+    // Create sample providers (data object remains the same for easy reference)
     const sampleProviders = [
       {
         email: "mike@example.com",
@@ -152,6 +154,9 @@ export class MemStorage implements IStorage {
         role: providerData.role,
       });
 
+      // FIX: Removed 'rating' and 'reviewCount' from the InsertProvider call
+      // as they are not standard InsertProvider fields. 
+      // The createProvider method below will set their defaults (0) using casting.
       await this.createProvider({
         userId: user.id,
         specialty: providerData.specialty,
@@ -159,11 +164,6 @@ export class MemStorage implements IStorage {
         description: providerData.description,
         hourlyRate: providerData.hourlyRate,
         isApproved: providerData.isApproved,
-        // FIX (Error TS2353): 'rating' does not exist on 'InsertProvider'.
-        // This property is removed from here. To fix this "correctly",
-        // add 'rating?: string | null' to your 'InsertProvider' schema.
-        // rating: providerData.rating, 
-        reviewCount: providerData.reviewCount,
         categories: providerData.categories,
       });
     }
@@ -180,8 +180,7 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    // FIX (Error TS2322): Handle 'phone' potentially being 'undefined'.
-    // 'User' type requires 'string | null', not 'undefined'.
+    // FIX: Handle 'phone' potentially being 'undefined' in InsertUser.
     const user: User = {
       ...insertUser,
       phone: insertUser.phone ?? null,
@@ -208,7 +207,7 @@ export class MemStorage implements IStorage {
 
   async createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory> {
     const id = randomUUID();
-    // FIX (Error TS2322): Handle 'description' being 'undefined'.
+    // FIX: Handle 'description' potentially being 'undefined' in InsertServiceCategory.
     const serviceCategory: ServiceCategory = {
       ...category,
       id,
@@ -269,18 +268,18 @@ export class MemStorage implements IStorage {
     const newProvider: Provider = {
       ...provider,
       id,
-      // FIX (Error TS1117): Removed duplicate 'categories' property.
       createdAt: new Date(),
       userId: provider.userId,
       specialty: provider.specialty,
       location: provider.location ?? "",
       description: provider.description ?? null,
       isApproved: provider.isApproved ?? false,
-      // FIX (Error TS2322): Handle 'isAvailable' being 'undefined'.
+      // FIX: Handle 'isAvailable' being 'undefined'.
       isAvailable: provider.isAvailable ?? null,
       businessName: (provider as any).businessName ?? null,
       serviceRadius: (provider as any).serviceRadius ?? null,
       hourlyRate: (provider as any).hourlyRate ?? null,
+      // Use 'any' casting to allow these fields, and set defaults (0) if not present.
       rating: (provider as any).rating ?? 0,
       reviewCount: (provider as any).reviewCount ?? 0,
       categories: provider.categories ?? [],
@@ -347,10 +346,6 @@ export class MemStorage implements IStorage {
       customerAddress: booking.customerAddress ?? "",
       scheduledTime: (booking as any).scheduledTime ?? "",
       status: booking.status ?? "pending",
-      // FIX (Error TS2353): 'price' does not exist on 'Booking'.
-      // This property is removed. To fix this "correctly",
-      // add 'price?: number | null' to your 'Booking' schema.
-      // price: (booking as any).price ?? null, 
       notes: booking.notes ?? null
     };
     this.bookings.set(id, newBooking);
