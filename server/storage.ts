@@ -260,6 +260,18 @@ export class MemStorage implements IStorage {
       id,
       categories: provider.categories || [],
       createdAt: new Date(),
+      userId: provider.userId,
+      specialty: provider.specialty,
+      location: provider.location ?? "",
+      description: provider.description ?? null,
+      isApproved: provider.isApproved ?? false,
+      businessName: (provider as any).businessName ?? null,
+      serviceRadius: (provider as any).serviceRadius ?? null,
+      hourlyRate: (provider as any).hourlyRate ?? null,
+      rating: (provider as any).rating ?? 0,
+      reviewCount: (provider as any).reviewCount ?? 0,
+      categories: provider.categories ?? [],
+      availability: (provider as any).availability ?? null,
     };
     this.providers.set(id, newProvider);
     return newProvider;
@@ -315,6 +327,15 @@ export class MemStorage implements IStorage {
       ...booking,
       id,
       createdAt: new Date(),
+      providerId: booking.providerId,
+      customerId: booking.customerId,
+      serviceDescription: booking.serviceDescription ?? "",
+      scheduledDate: booking.scheduledDate,
+      customerAddress: booking.customerAddress ?? "",
+      scheduledTime: (booking as any).scheduledTime ?? "",
+      status: booking.status ?? "pending",
+      price: (booking as any).price ?? null,
+      notes: booking.notes ?? null
     };
     this.bookings.set(id, newBooking);
     return newBooking;
@@ -340,6 +361,12 @@ export class MemStorage implements IStorage {
       ...review,
       id,
       createdAt: new Date(),
+      providerId: review.providerId,
+      customerId: review.customerId,
+      bookingId: review.bookingId,
+      rating: review.rating,
+      comment: review.comment ?? null,
+      isVisible: review.isVisible ?? true,
     };
     this.reviews.set(id, newReview);
     return newReview;
