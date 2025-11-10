@@ -1,14 +1,21 @@
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import * as schema from "../shared/schema";
 
-dotenv.config();
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
+}
+
+const sql = neon(process.env.DATABASE_URL);
+export const db = drizzle(sql, { schema });
 
 export const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.DATABASE_URL!);
-    console.log("✅ MongoDB Connected Successfully");
+    // Test the connection
+    await sql`SELECT 1`;
+    console.log("✅ PostgreSQL Connected Successfully");
   } catch (err) {
-    console.error("❌ MongoDB Connection Failed:", err);
+    console.error("❌ PostgreSQL Connection Failed:", err);
     process.exit(1);
   }
 };

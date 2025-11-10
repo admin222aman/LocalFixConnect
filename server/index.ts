@@ -43,8 +43,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // ✅ Connect to MongoDB first
+  // ✅ Connect to PostgreSQL first
   await connectDB();
+
+  // Initialize seed data
+  const { storage } = await import("./storage.js");
+  if ('initializeSeedData' in storage && typeof storage.initializeSeedData === 'function') {
+    await storage.initializeSeedData();
+  }
 
   const server = await registerRoutes(app);
 

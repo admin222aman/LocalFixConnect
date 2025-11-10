@@ -257,10 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = insertProviderSchema.partial().parse(req.body);
-      const updatedProvider = await storage.updateProvider(req.params.id, {
-        ...updates,
-        categories: updates.categories || [], // Add categories here
-      });
+      const updatedProvider = await storage.updateProvider(req.params.id, updates);
 
       res.json(updatedProvider);
     } catch (error) {
@@ -275,6 +272,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Bookings
   app.get("/api/bookings", requireAuth, async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
     const user = await storage.getUser(req.session.userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -354,6 +355,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid scheduled date" });
       }
 
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
       // Parse and validate the booking data
       const bookingData = {
         customerId: req.session.userId,
@@ -361,9 +366,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         serviceDescription: req.body.serviceDescription,
         scheduledDate: scheduledDate,
         scheduledTime: req.body.scheduledTime || "09:00",
-        status: "pending",
+        status: "pending" as const,
         customerAddress: req.body.customerAddress,
-        customerPhone: req.body.customerPhone,
         estimatedDuration: Number(req.body.estimatedDuration) || 2,
         notes: req.body.notes || "",
       };
@@ -389,6 +393,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const booking = await storage.getBooking(req.params.id);
       if (!booking) {
         return res.status(404).json({ message: "Booking not found" });
+      }
+
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
       }
 
       const user = await storage.getUser(req.session.userId);
@@ -422,6 +430,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reviews
   app.post("/api/reviews", requireAuth, async (req, res) => {
     try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
       const reviewData = insertReviewSchema.parse(req.body);
 
       // Verify booking exists and belongs to user

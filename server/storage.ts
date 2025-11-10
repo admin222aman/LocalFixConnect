@@ -62,7 +62,7 @@ export class MemStorage implements IStorage {
     this.initializeSeedData();
   }
 
-  private async initializeSeedData() {
+  async initializeSeedData() {
     // Create service categories
     const categories = [
       { name: "Electrical", description: "Wiring, repairs, installations", icon: "zap", color: "blue" },
@@ -343,13 +343,10 @@ export class MemStorage implements IStorage {
       ...booking,
       id,
       createdAt: new Date(),
-      providerId: booking.providerId,
-      customerId: booking.customerId,
-      serviceDescription: booking.serviceDescription ?? "",
-      scheduledDate: booking.scheduledDate,
-      customerAddress: booking.customerAddress ?? "",
-      scheduledTime: (booking as any).scheduledTime ?? "",
       status: booking.status ?? "pending",
+      estimatedDuration: booking.estimatedDuration ?? null,
+      estimatedCost: booking.estimatedCost ?? null,
+      actualCost: booking.actualCost ?? null,
       notes: booking.notes ?? null
     };
     this.bookings.set(id, newBooking);
@@ -401,4 +398,253 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { db } from "./db";
+import { users, serviceCategories, providers, providerCategories, bookings, reviews } from "@shared/schema";
+import { eq, and, like, sql } from "drizzle-orm";
+
+export class DbStorage implements IStorage {
+  async initializeSeedData() {
+    // Check if data already exists
+    const existingCategories = await db.select().from(serviceCategories);
+    if (existingCategories.length > 0) return;
+
+    // Create service categories
+    const categories = [
+      { name: "Electrical", description: "Wiring, repairs, installations", icon: "zap", color: "blue" },
+      { name: "Plumbing", description: "Pipes, fixtures, emergency repairs", icon: "wrench", color: "green" },
+      { name: "Carpentry", description: "Custom work, repairs, installations", icon: "hammer", color: "amber" },
+      { name: "HVAC", description: "Heating, cooling, ventilation", icon: "thermometer", color: "purple" },
+      { name: "General Contracting", description: "Home improvements, renovations", icon: "building", color: "red" },
+      { name: "Landscaping", description: "Garden design, lawn care", icon: "leaf", color: "teal" },
+      { name: "Painting", description: "Interior, exterior, touch-ups", icon: "paintbrush", color: "orange" },
+      { name: "Cleaning Services", description: "House cleaning, deep cleaning", icon: "spray", color: "gray" },
+    ];
+
+    for (const cat of categories) {
+      await this.createServiceCategory(cat);
+    }
+
+    // Create admin user
+    const hashedPassword = await bcrypt.hash("admin123", 10);
+    await this.createUser({
+      email: "admin@localfix.com",
+      password: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+      role: "admin",
+    });
+
+    // Get category IDs for sample data
+    const allCategories = await db.select().from(serviceCategories);
+    const electricalCat = allCategories.find(c => c.name === "Electrical");
+    const plumbingCat = allCategories.find(c => c.name === "Plumbing");
+    const carpentryCat = allCategories.find(c => c.name === "Carpentry");
+
+    // Create sample providers
+    const sampleProviders = [
+      {
+        email: "mike@example.com",
+        password: await bcrypt.hash("password123", 10),
+        firstName: "Mike",
+        lastName: "Thompson",
+        role: "provider" as const,
+        specialty: "Licensed Electrician",
+        location: "Downtown Area",
+        description: "15+ years experience in residential and commercial electrical work. Available for emergency calls.",
+        hourlyRate: "85.00",
+        isApproved: true,
+        rating: "4.9",
+        reviewCount: 127,
+        categories: electricalCat ? [electricalCat.id] : [],
+      },
+      {
+        email: "sarah@example.com",
+        password: await bcrypt.hash("password123", 10),
+        firstName: "Sarah",
+        lastName: "Martinez",
+        role: "provider" as const,
+        specialty: "Master Plumber",
+        location: "North Side",
+        description: "Specializing in emergency repairs, fixture installations, and water heater services. Fast response time.",
+        hourlyRate: "95.00",
+        isApproved: true,
+        rating: "4.8",
+        reviewCount: 93,
+        categories: plumbingCat ? [plumbingCat.id] : [],
+      },
+      {
+        email: "david@example.com",
+        password: await bcrypt.hash("password123", 10),
+        firstName: "David",
+        lastName: "Chen",
+        role: "provider" as const,
+        specialty: "Master Carpenter",
+        location: "West End",
+        description: "Custom furniture, deck building, and general carpentry. Quality craftsmanship guaranteed.",
+        hourlyRate: "75.00",
+        isApproved: true,
+        rating: "5.0",
+        reviewCount: 45,
+        categories: carpentryCat ? [carpentryCat.id] : [],
+      },
+    ];
+
+    for (const providerData of sampleProviders) {
+      const { categories: cats, ...userData } = providerData;
+      const user = await this.createUser(userData);
+      const provider = await this.createProvider({
+        userId: user.id,
+        businessName: `${providerData.firstName}'s ${providerData.specialty}`,
+        specialty: providerData.specialty,
+        description: providerData.description,
+        location: providerData.location,
+        hourlyRate: providerData.hourlyRate,
+        isApproved: providerData.isApproved,
+        categories: cats,
+      });
+      
+      // Update rating and review count separately (not part of InsertProvider)
+      await this.updateProvider(provider.id, {
+        rating: providerData.rating,
+        reviewCount: providerData.reviewCount,
+      });
+    }
+  }
+
+  // User methods
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result[0];
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const result = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return result[0];
+  }
+
+  // Service category methods
+  async getServiceCategories(): Promise<ServiceCategory[]> {
+    return db.select().from(serviceCategories);
+  }
+
+  async createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory> {
+    const result = await db.insert(serviceCategories).values(category).returning();
+    return result[0];
+  }
+
+  // Provider methods
+  async getProvider(id: string): Promise<Provider | undefined> {
+    const result = await db.select().from(providers).where(eq(providers.id, id));
+    return result[0];
+  }
+
+  async getProviderByUserId(userId: string): Promise<Provider | undefined> {
+    const result = await db.select().from(providers).where(eq(providers.userId, userId));
+    return result[0];
+  }
+
+  async getProviders(filters?: { categoryId?: string; location?: string; isApproved?: boolean }): Promise<Provider[]> {
+    let query = db.select().from(providers);
+    
+    const conditions = [];
+    if (filters?.isApproved !== undefined) {
+      conditions.push(eq(providers.isApproved, filters.isApproved));
+    }
+    if (filters?.location) {
+      conditions.push(like(providers.location, `%${filters.location}%`));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    const allProviders = await query;
+    
+    // Filter by category if provided
+    if (filters?.categoryId) {
+      return allProviders.filter(p => p.categories?.includes(filters.categoryId!));
+    }
+    
+    return allProviders;
+  }
+
+  async createProvider(provider: InsertProvider): Promise<Provider> {
+    const result = await db.insert(providers).values(provider).returning();
+    return result[0];
+  }
+
+  async updateProvider(id: string, updates: Partial<Provider>): Promise<Provider | undefined> {
+    const result = await db.update(providers).set(updates).where(eq(providers.id, id)).returning();
+    return result[0];
+  }
+
+  // Provider category methods
+  async getProviderCategories(providerId: string): Promise<ProviderCategory[]> {
+    return db.select().from(providerCategories).where(eq(providerCategories.providerId, providerId));
+  }
+
+  async createProviderCategory(pc: InsertProviderCategory): Promise<ProviderCategory> {
+    const result = await db.insert(providerCategories).values(pc).returning();
+    return result[0];
+  }
+
+  // Booking methods
+  async getBooking(id: string): Promise<Booking | undefined> {
+    const result = await db.select().from(bookings).where(eq(bookings.id, id));
+    return result[0];
+  }
+
+  async getBookings(filters?: { customerId?: string; providerId?: string; status?: string }): Promise<Booking[]> {
+    const conditions = [];
+    if (filters?.customerId) conditions.push(eq(bookings.customerId, filters.customerId));
+    if (filters?.providerId) conditions.push(eq(bookings.providerId, filters.providerId));
+    if (filters?.status) conditions.push(eq(bookings.status, filters.status as any));
+    
+    if (conditions.length > 0) {
+      return db.select().from(bookings).where(and(...conditions));
+    }
+    return db.select().from(bookings);
+  }
+
+  async createBooking(booking: InsertBooking): Promise<Booking> {
+    const result = await db.insert(bookings).values(booking).returning();
+    return result[0];
+  }
+
+  async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking | undefined> {
+    const result = await db.update(bookings).set(updates).where(eq(bookings.id, id)).returning();
+    return result[0];
+  }
+
+  // Review methods
+  async getReviews(providerId: string): Promise<Review[]> {
+    return db.select().from(reviews).where(eq(reviews.providerId, providerId));
+  }
+
+  async createReview(review: InsertReview): Promise<Review> {
+    const result = await db.insert(reviews).values(review).returning();
+    return result[0];
+  }
+
+  async updateReview(id: string, updates: Partial<Review>): Promise<Review | undefined> {
+    const result = await db.update(reviews).set(updates).where(eq(reviews.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteReview(id: string): Promise<boolean> {
+    const result = await db.delete(reviews).where(eq(reviews.id, id)).returning();
+    return result.length > 0;
+  }
+}
+
+export const storage = process.env.NODE_ENV === 'test' ? new MemStorage() : new DbStorage();
