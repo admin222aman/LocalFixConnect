@@ -274,16 +274,25 @@ export class MemStorage implements IStorage {
       location: provider.location ?? "",
       description: provider.description ?? null,
       isApproved: provider.isApproved ?? false,
-      // FIX: Handle 'isAvailable' being 'undefined'.
-      isAvailable: provider.isAvailable ?? null,
+      
+      // ✅ FIX: Default to 'true' if undefined, as it's a provider's availability flag.
+      isAvailable: (provider as any).isAvailable ?? true, 
+      
       businessName: (provider as any).businessName ?? null,
       serviceRadius: (provider as any).serviceRadius ?? null,
       hourlyRate: (provider as any).hourlyRate ?? null,
-      // Use 'any' casting to allow these fields, and set defaults (0) if not present.
-      rating: (provider as any).rating ?? 0,
+
+      // 💥 CRITICAL FIX: The rating must be a STRING ("0") to match the sample data ("4.9").
+      rating: (provider as any).rating ?? "0", 
       reviewCount: (provider as any).reviewCount ?? 0,
       categories: provider.categories ?? [],
       availability: (provider as any).availability ?? null,
+
+      // ✅ FIX: Added missing fields required by the full Provider type, assuming null/empty array defaults.
+      profileImage: (provider as any).profileImage ?? null, 
+      portfolio: (provider as any).portfolio ?? [], 
+      certifications: (provider as any).certifications ?? [], 
+      yearsExperience: (provider as any).yearsExperience ?? null,
     };
     this.providers.set(id, newProvider);
     return newProvider;
