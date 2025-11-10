@@ -1,13 +1,13 @@
-import { 
-  type User, 
-  type InsertUser, 
-  type ServiceCategory, 
+import {
+  type User,
+  type InsertUser,
+  type ServiceCategory,
   type InsertServiceCategory,
-  type Provider, 
+  type Provider,
   type InsertProvider,
   type ProviderCategory,
   type InsertProviderCategory,
-  type Booking, 
+  type Booking,
   type InsertBooking,
   type Review,
   type InsertReview
@@ -159,7 +159,10 @@ export class MemStorage implements IStorage {
         description: providerData.description,
         hourlyRate: providerData.hourlyRate,
         isApproved: providerData.isApproved,
-        rating: providerData.rating,
+        // FIX (Error TS2353): 'rating' does not exist on 'InsertProvider'.
+        // This property is removed from here. To fix this "correctly",
+        // add 'rating?: string | null' to your 'InsertProvider' schema.
+        // rating: providerData.rating, 
         reviewCount: providerData.reviewCount,
         categories: providerData.categories,
       });
@@ -177,8 +180,11 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    // FIX (Error TS2322): Handle 'phone' potentially being 'undefined'.
+    // 'User' type requires 'string | null', not 'undefined'.
     const user: User = {
       ...insertUser,
+      phone: insertUser.phone ?? null,
       id,
       createdAt: new Date(),
     };
@@ -202,7 +208,12 @@ export class MemStorage implements IStorage {
 
   async createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory> {
     const id = randomUUID();
-    const serviceCategory: ServiceCategory = { ...category, id };
+    // FIX (Error TS2322): Handle 'description' being 'undefined'.
+    const serviceCategory: ServiceCategory = {
+      ...category,
+      id,
+      description: category.description ?? null,
+    };
     this.serviceCategories.set(id, serviceCategory);
     return serviceCategory;
   }
@@ -258,13 +269,15 @@ export class MemStorage implements IStorage {
     const newProvider: Provider = {
       ...provider,
       id,
-      categories: provider.categories || [],
+      // FIX (Error TS1117): Removed duplicate 'categories' property.
       createdAt: new Date(),
       userId: provider.userId,
       specialty: provider.specialty,
       location: provider.location ?? "",
       description: provider.description ?? null,
       isApproved: provider.isApproved ?? false,
+      // FIX (Error TS2322): Handle 'isAvailable' being 'undefined'.
+      isAvailable: provider.isAvailable ?? null,
       businessName: (provider as any).businessName ?? null,
       serviceRadius: (provider as any).serviceRadius ?? null,
       hourlyRate: (provider as any).hourlyRate ?? null,
@@ -334,7 +347,10 @@ export class MemStorage implements IStorage {
       customerAddress: booking.customerAddress ?? "",
       scheduledTime: (booking as any).scheduledTime ?? "",
       status: booking.status ?? "pending",
-      price: (booking as any).price ?? null,
+      // FIX (Error TS2353): 'price' does not exist on 'Booking'.
+      // This property is removed. To fix this "correctly",
+      // add 'price?: number | null' to your 'Booking' schema.
+      // price: (booking as any).price ?? null, 
       notes: booking.notes ?? null
     };
     this.bookings.set(id, newBooking);
